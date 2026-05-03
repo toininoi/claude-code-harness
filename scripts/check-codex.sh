@@ -26,7 +26,7 @@ fi
 # Codex のバージョンを取得
 CODEX_VERSION=$(codex --version 2>/dev/null | head -1 || echo "unknown")
 
-# 最新バージョンを npm から取得（タイムアウト 3秒）
+# 最新バージョンを npm から取得（ネットワーク不可の場合は unknown）
 LATEST_VERSION=$(npm show @openai/codex version 2>/dev/null || echo "unknown")
 
 # バージョン比較用の関数
@@ -56,10 +56,11 @@ if [[ "$LATEST_VERSION" != "unknown" && "$CODEX_VERSION" != "unknown" ]]; then
 
 アップデートするには:
 \`\`\`bash
-npm update -g @openai/codex
+codex update
 \`\`\`
 
-または Claude に「Codex をアップデートして」と依頼してください。
+`codex update` が使えない古いインストールだけ、package manager の
+`npm update -g @openai/codex` などにフォールバックしてください。
 
 EOF
     fi

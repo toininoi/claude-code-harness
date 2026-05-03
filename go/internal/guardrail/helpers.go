@@ -8,65 +8,175 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// Protected path detection
+// Protected path taxonomy
 // ---------------------------------------------------------------------------
 
-var protectedPathPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`^\.git/`),
-	regexp.MustCompile(`/\.git/`),
-	regexp.MustCompile(`^\.env$`),
-	regexp.MustCompile(`/\.env$`),
-	regexp.MustCompile(`\.env\.`),
-	regexp.MustCompile(`id_rsa`),
-	regexp.MustCompile(`id_ed25519`),
-	regexp.MustCompile(`id_ecdsa`),
-	regexp.MustCompile(`id_dsa`),
-	regexp.MustCompile(`\.pem$`),
-	regexp.MustCompile(`\.key$`),
-	regexp.MustCompile(`\.p12$`),
-	regexp.MustCompile(`\.pfx$`),
-	regexp.MustCompile(`authorized_keys`),
-	regexp.MustCompile(`known_hosts`),
-	// CC 2.1.90: protect git hooks directory (.husky/)
-	regexp.MustCompile(`(?:^|/)\.husky(?:/|$)`),
+type protectedPathLevel int
+
+const (
+	protectedPathNone protectedPathLevel = iota
+	protectedPathWarn
+	protectedPathAsk
+	protectedPathDeny
+)
+
+type protectedPathMatch struct {
+	Level  protectedPathLevel
+	Reason string
+	Path   string
 }
 
-// matchesProtectedPatterns reports whether filePath matches any protected pattern.
-func matchesProtectedPatterns(filePath string) bool {
-	for _, p := range protectedPathPatterns {
-		if p.MatchString(filePath) {
-			return true
+type protectedPathRule struct {
+	level   protectedPathLevel
+	reason  string
+	pattern *regexp.Regexp
+}
+
+// Claude Code 2.1.121/2.1.126 protected path taxonomy:
+//   - deny: .git/, secrets, shell rc/profile files, destructive hook entrypoints.
+//   - ask: .claude/skills/, .claude/agents/, .claude/commands/, .vscode/.
+//   - warn: .claude/rules/, .claude/memory/, setup metadata.
+//
+// This intentionally does not deny every .claude/ path. Runtime state and other
+// project-local Claude data remain governed by the normal write rules.
+var protectedPathRules = []protectedPathRule{
+	// deny: repository internals, secrets, hook entrypoints, and shell startup files
+	{protectedPathDeny, "Git internal metadata", regexp.MustCompile(`(?:^|/)\.git(?:/|$)`)},
+	{protectedPathDeny, "secret or credential file", regexp.MustCompile(`(?:^|/)\.env(?:$|\.)`)},
+	{protectedPathDeny, "secret or credential file", regexp.MustCompile(`(?:^|/)\.envrc$`)},
+	{protectedPathDeny, "secret or credential file", regexp.MustCompile(`(?:^|/)secrets?(?:/|$)`)},
+	{protectedPathDeny, "secret or credential file", regexp.MustCompile(`(?:^|/)(?:id_rsa|id_ed25519|id_ecdsa|id_dsa)$`)},
+	{protectedPathDeny, "secret or credential file", regexp.MustCompile(`\.(?:pem|key|p12|pfx)$`)},
+	{protectedPathDeny, "SSH trust file", regexp.MustCompile(`(?:^|/)(?:authorized_keys|known_hosts)$`)},
+	{protectedPathDeny, "destructive hook entrypoint", regexp.MustCompile(`(?:^|/)\.husky(?:/|$)`)},
+	{protectedPathDeny, "destructive hook entrypoint", regexp.MustCompile(`(?:^|/)\.claude/hooks(?:/|$)`)},
+	{protectedPathDeny, "shell rc/profile file", regexp.MustCompile(`(?:^|/)\.(?:bashrc|bash_profile|bash_login|profile|zshrc|zprofile|zshenv|zlogin|zlogout|kshrc|cshrc|tcshrc)$`)},
+	{protectedPathDeny, "shell rc/profile file", regexp.MustCompile(`(?:^|/)\.config/fish/config\.fish$`)},
+	{protectedPathDeny, "shell rc/profile file", regexp.MustCompile(`(?:^|/)(?:Microsoft\.)?(?:PowerShell_)?profile\.ps1$`)},
+
+	// ask: agent capability surfaces and editor automation settings
+	{protectedPathAsk, "Claude capability path", regexp.MustCompile(`(?:^|/)\.claude/(?:skills|agents|commands)(?:/|$)`)},
+	{protectedPathAsk, "editor automation settings", regexp.MustCompile(`(?:^|/)\.vscode(?:/|$)`)},
+
+	// warn: policy/memory/setup metadata that is important but not hard-denied
+	{protectedPathWarn, "Claude rule or memory path", regexp.MustCompile(`(?:^|/)\.claude/(?:rules|memory)(?:/|$)`)},
+	{protectedPathWarn, "setup metadata", regexp.MustCompile(`(?:^|/)\.claude/(?:settings(?:\.local)?\.json|config(?:/|$)|Plans\.md$)`)},
+	{protectedPathWarn, "setup metadata", regexp.MustCompile(`(?:^|/)\.claude-plugin/plugin\.json$`)},
+	{protectedPathWarn, "setup metadata", regexp.MustCompile(`(?:^|/)(?:CLAUDE|AGENTS)\.md$`)},
+	{protectedPathWarn, "setup metadata", regexp.MustCompile(`(?:^|/)\.mcp\.json$`)},
+	{protectedPathWarn, "setup metadata", regexp.MustCompile(`(?:^|/)harness\.toml$`)},
+}
+
+func normalizePathForGuardrail(filePath string) string {
+	cleaned := filepath.Clean(filePath)
+	if cleaned == "." {
+		return filePath
+	}
+	return filepath.ToSlash(cleaned)
+}
+
+func classifyProtectedPathPattern(filePath string) protectedPathMatch {
+	normalized := normalizePathForGuardrail(filePath)
+	best := protectedPathMatch{Level: protectedPathNone, Path: normalized}
+	for _, rule := range protectedPathRules {
+		if rule.pattern.MatchString(normalized) && rule.level > best.Level {
+			best = protectedPathMatch{
+				Level:  rule.level,
+				Reason: rule.reason,
+				Path:   normalized,
+			}
 		}
 	}
-	return false
+	return best
 }
 
-// isProtectedPath checks whether filePath refers to a protected resource.
-// It first matches against protectedPathPatterns directly, then resolves
-// symlinks via filepath.EvalSymlinks and re-checks the resolved path.
-// If EvalSymlinks returns an error (symlink loop, broken link, etc.),
-// the function returns true (fail-safe: deny the operation).
-func isProtectedPath(filePath string) bool {
-	// Direct match
-	if matchesProtectedPatterns(filePath) {
-		return true
+func strongerProtectedPathMatch(a, b protectedPathMatch) protectedPathMatch {
+	if b.Level > a.Level {
+		return b
 	}
+	return a
+}
+
+func classifyProtectedPath(filePath string) protectedPathMatch {
+	match := classifyProtectedPathPattern(filePath)
 
 	// Resolve symlinks and check the real path (CC 2.1.89: symlink target resolution)
 	realPath, err := filepath.EvalSymlinks(filePath)
 	if err != nil {
-		// Fail-safe: symlink loop, broken link, or other error → deny
-		// Exception: if the path simply doesn't exist, it's not protected.
-		// We distinguish by checking os.Lstat; if the path doesn't exist at all
-		// (not even as a dangling symlink), treat as not protected.
+		// Fail-safe: symlink loop, broken link, or other error → deny.
+		// Exception: if the path simply doesn't exist, it's classified from
+		// the path text only, so new non-sensitive files are not over-blocked.
 		if _, statErr := os.Lstat(filePath); os.IsNotExist(statErr) {
-			return false
+			return match
 		}
-		// Any other error (loop, permission denied, etc.) → fail-safe deny
-		return true
+		return protectedPathMatch{
+			Level:  protectedPathDeny,
+			Reason: "unresolvable protected path",
+			Path:   normalizePathForGuardrail(filePath),
+		}
 	}
 
-	return matchesProtectedPatterns(realPath)
+	return strongerProtectedPathMatch(match, classifyProtectedPathPattern(realPath))
+}
+
+// isProtectedPath checks whether filePath matches any protected taxonomy level.
+// If EvalSymlinks returns an error (symlink loop, broken link, etc.),
+// the function returns true via the fail-safe deny classification.
+func isProtectedPath(filePath string) bool {
+	return classifyProtectedPath(filePath).Level != protectedPathNone
+}
+
+// ---------------------------------------------------------------------------
+// Bash write target extraction
+// ---------------------------------------------------------------------------
+
+var (
+	bashRedirectionTargetPattern = regexp.MustCompile(`(?:^|[\s;&|])(?:\d*&>>?|\d*>>?|&>>?|>\|)\s*['"]?([^'"` + "`" + `\s;&|]+)['"]?`)
+	bashTeeCommandPattern        = regexp.MustCompile(`(?:^|[|;&]\s*)tee\b([^;&|]*)`)
+)
+
+func stripShellTokenQuotes(token string) string {
+	token = strings.TrimSpace(token)
+	token = strings.Trim(token, "'\"")
+	return token
+}
+
+func extractBashWriteTargets(command string) []string {
+	var targets []string
+	for _, m := range bashRedirectionTargetPattern.FindAllStringSubmatch(command, -1) {
+		if len(m) >= 2 {
+			targets = append(targets, stripShellTokenQuotes(m[1]))
+		}
+	}
+
+	for _, m := range bashTeeCommandPattern.FindAllStringSubmatch(command, -1) {
+		if len(m) < 2 {
+			continue
+		}
+		for _, token := range strings.Fields(m[1]) {
+			token = stripShellTokenQuotes(token)
+			if token == "" || token == "--" {
+				continue
+			}
+			if strings.HasPrefix(token, "-") {
+				continue
+			}
+			if strings.ContainsAny(token, "<>|`$") {
+				continue
+			}
+			targets = append(targets, token)
+		}
+	}
+
+	return targets
+}
+
+func classifyBashProtectedWrite(command string) protectedPathMatch {
+	best := protectedPathMatch{Level: protectedPathNone}
+	for _, target := range extractBashWriteTargets(command) {
+		best = strongerProtectedPathMatch(best, classifyProtectedPathPattern(target))
+	}
+	return best
 }
 
 // ---------------------------------------------------------------------------

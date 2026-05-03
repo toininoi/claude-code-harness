@@ -953,6 +953,16 @@ PHASE58_FOLLOWUP_DOC="${ROOT_DIR}/docs/upstream-followups-phase58-2026-05-03.md"
   echo "${PHASE58_FOLLOWUP_DOC} does not exist"
   exit 1
 }
+PHASE58_ADOPTION_DOC="${ROOT_DIR}/docs/upstream-adoption-plan-phase58-2026-05-03.md"
+[ -f "${PHASE58_ADOPTION_DOC}" ] || {
+  echo "${PHASE58_ADOPTION_DOC} does not exist"
+  exit 1
+}
+PHASE58_CODEX_POLICY_DOC="${ROOT_DIR}/docs/codex-permission-profiles-policy.md"
+[ -f "${PHASE58_CODEX_POLICY_DOC}" ] || {
+  echo "${PHASE58_CODEX_POLICY_DOC} does not exist"
+  exit 1
+}
 for referencing_file in \
   "${ROOT_DIR}/CHANGELOG.md" \
   "${ROOT_DIR}/docs/CLAUDE-feature-table.md" \
@@ -1034,6 +1044,26 @@ grep -q -- '--full-auto` を新規 docs の default として増やさない' "$
   echo "Phase 58 follow-up doc must avoid new --full-auto defaults"
   exit 1
 }
+grep -q '競合しない使い方' "${PHASE58_ADOPTION_DOC}" || {
+  echo "Phase 58 adoption doc must include conflict-free adoption guidance"
+  exit 1
+}
+grep -q 'Codex `0.125.0` and `0.128.0`' "${PHASE58_CODEX_POLICY_DOC}" || {
+  echo "Codex permission profile policy must name the covered Codex versions"
+  exit 1
+}
+grep -q 'Do not copy that pattern into new docs or new scripts' "${PHASE58_CODEX_POLICY_DOC}" || {
+  echo "Codex permission profile policy must keep --full-auto as legacy-only"
+  exit 1
+}
+grep -q 'allowManagedDomainsOnly' "${ROOT_DIR}/docs/plugin-managed-settings-policy.md" || {
+  echo "Managed settings policy must document allowManagedDomainsOnly boundary"
+  exit 1
+}
+grep -q 'allowManagedReadPathsOnly' "${ROOT_DIR}/scripts/ci/check-consistency.sh" || {
+  echo "Consistency check must protect allowManagedReadPathsOnly from normal defaults"
+  exit 1
+}
 grep -q 'Phase 58 Claude Code 2.1.120-2.1.126 / Codex 0.125.0-0.128.0 snapshot' "${ROOT_DIR}/docs/CLAUDE-feature-table.md" || {
   echo "Feature Table must include the Phase 58 upstream snapshot row"
   exit 1
@@ -1076,6 +1106,18 @@ grep -q '58.1.1 .* cc:完了' "${ROOT_DIR}/Plans.md" || {
 }
 grep -q '58.1.2 .* cc:完了' "${ROOT_DIR}/Plans.md" || {
   echo "Plans.md must mark 58.1.2 as complete"
+  exit 1
+}
+grep -q '58.1.3 .* cc:完了' "${ROOT_DIR}/Plans.md" || {
+  echo "Plans.md must mark 58.1.3 as complete"
+  exit 1
+}
+grep -q '58.2.1 .* cc:完了' "${ROOT_DIR}/Plans.md" || {
+  echo "Plans.md must mark 58.2.1 as complete"
+  exit 1
+}
+grep -q '58.3.1 .* cc:完了' "${ROOT_DIR}/Plans.md" || {
+  echo "Plans.md must mark 58.3.1 as complete"
   exit 1
 }
 

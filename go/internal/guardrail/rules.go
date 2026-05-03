@@ -18,17 +18,6 @@ type GuardRule struct {
 	Evaluate    func(ctx hookproto.RuleContext) *hookproto.HookResult
 }
 
-// Pre-compiled patterns for R03 (shell write to protected paths)
-var r03ShellWritePatterns = []*regexp.Regexp{
-	regexp.MustCompile(`(?:>>?|tee)\s+\S*\.env\b`),
-	regexp.MustCompile(`(?:>>?|tee)\s+\S*\.env\.`),
-	regexp.MustCompile(`(?:>>?|tee)\s+\S*\.git/`),
-	regexp.MustCompile(`(?:>>?|tee)\s+\S*id_rsa\b`),
-	regexp.MustCompile(`(?:>>?|tee)\s+\S*id_ed25519\b`),
-	regexp.MustCompile(`(?:>>?|tee)\s+\S*\.pem\b`),
-	regexp.MustCompile(`(?:>>?|tee)\s+\S*\.key\b`),
-}
-
 // Pre-compiled patterns for R08 (breezing reviewer prohibited commands)
 var r08ReviewerProhibitedPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`\bgit\s+(?:commit|push|reset|checkout|merge|rebase)\b`),
@@ -44,6 +33,28 @@ var r09SecretPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`\.pem$`),
 	regexp.MustCompile(`\.key$`),
 	regexp.MustCompile(`secrets?/`),
+}
+
+func protectedPathHookResult(match protectedPathMatch, filePath, operation string) *hookproto.HookResult {
+	switch match.Level {
+	case protectedPathDeny:
+		return &hookproto.HookResult{
+			Decision: hookproto.DecisionDeny,
+			Reason:   fmt.Sprintf("%s は禁止されています: %s（%s）", operation, filePath, match.Reason),
+		}
+	case protectedPathAsk:
+		return &hookproto.HookResult{
+			Decision: hookproto.DecisionAsk,
+			Reason:   fmt.Sprintf("%s は確認が必要です: %s（%s）", operation, filePath, match.Reason),
+		}
+	case protectedPathWarn:
+		return &hookproto.HookResult{
+			Decision:      hookproto.DecisionApprove,
+			SystemMessage: fmt.Sprintf("警告: %s を検出しました: %s（%s）", operation, filePath, match.Reason),
+		}
+	default:
+		return nil
+	}
 }
 
 // Rules is the ordered table of all guard rules.
@@ -76,13 +87,11 @@ var Rules = []GuardRule{
 			if !ok {
 				return nil
 			}
-			if !isProtectedPath(filePath) {
+			match := classifyProtectedPath(filePath)
+			if match.Level == protectedPathNone {
 				return nil
 			}
-			return &hookproto.HookResult{
-				Decision: hookproto.DecisionDeny,
-				Reason:   fmt.Sprintf("保護されたパスへの書き込みは禁止されています: %s", filePath),
-			}
+			return protectedPathHookResult(match, filePath, "保護パスへのファイル書き込み")
 		},
 	},
 
@@ -95,15 +104,11 @@ var Rules = []GuardRule{
 			if !ok {
 				return nil
 			}
-			for _, p := range r03ShellWritePatterns {
-				if p.MatchString(command) {
-					return &hookproto.HookResult{
-						Decision: hookproto.DecisionDeny,
-						Reason:   "保護されたファイルへのシェル書き込みは禁止されています。",
-					}
-				}
+			match := classifyBashProtectedWrite(command)
+			if match.Level == protectedPathNone {
+				return nil
 			}
-			return nil
+			return protectedPathHookResult(match, match.Path, "保護パスへのシェル書き込み")
 		},
 	},
 

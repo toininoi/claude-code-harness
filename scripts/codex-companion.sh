@@ -103,6 +103,8 @@ run_structured_task_exec() {
   # These exec-local sandbox defaults are kept only to encode Harness task intent:
   # `task --write` means workspace-write, and read-only remains the safe default.
   # If the caller provides --sandbox/-s/--full-auto/bypass explicitly, preserve it.
+  # `--full-auto` is deprecated in current Codex guidance, so Harness must not
+  # add it by default here; explicit caller intent is passed through unchanged.
   shift || true # drop "task"
   while [ $# -gt 0 ]; do
     current="$1"

@@ -108,6 +108,69 @@ func TestR02_WriteToPemFile(t *testing.T) {
 	}
 }
 
+func TestR02_WriteToClaudeSkillsAsks(t *testing.T) {
+	ctx := makeCtx("Write", map[string]interface{}{"file_path": "/project/.claude/skills/demo/SKILL.md"})
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionAsk {
+		t.Errorf("expected ask, got %s", result.Decision)
+	}
+}
+
+func TestR02_MultiEditClaudeAgentsAsks(t *testing.T) {
+	ctx := makeCtx("MultiEdit", map[string]interface{}{"file_path": "/project/.claude/agents/worker.md"})
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionAsk {
+		t.Errorf("expected ask, got %s", result.Decision)
+	}
+}
+
+func TestR02_EditClaudeCommandsAsks(t *testing.T) {
+	ctx := makeCtx("Edit", map[string]interface{}{"file_path": "/project/.claude/commands/work.md"})
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionAsk {
+		t.Errorf("expected ask, got %s", result.Decision)
+	}
+}
+
+func TestR02_WriteVSCodeAsks(t *testing.T) {
+	ctx := makeCtx("Write", map[string]interface{}{"file_path": "/project/.vscode/settings.json"})
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionAsk {
+		t.Errorf("expected ask, got %s", result.Decision)
+	}
+}
+
+func TestR02_WriteShellProfileDeniedInWorkMode(t *testing.T) {
+	ctx := makeCtx("Write", map[string]interface{}{"file_path": "/Users/example/.zshrc"})
+	ctx.WorkMode = true
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionDeny {
+		t.Errorf("expected deny in work mode, got %s", result.Decision)
+	}
+}
+
+func TestR02_WriteClaudeRulesWarns(t *testing.T) {
+	ctx := makeCtx("Write", map[string]interface{}{"file_path": "/project/.claude/rules/test-quality.md"})
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionApprove {
+		t.Errorf("expected approve warning, got %s", result.Decision)
+	}
+	if result.SystemMessage == "" {
+		t.Error("expected warning systemMessage")
+	}
+}
+
+func TestR02_WriteClaudeStateNotOverDenied(t *testing.T) {
+	ctx := makeCtx("Write", map[string]interface{}{"file_path": "/project/.claude/state/session.json"})
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionApprove {
+		t.Errorf("expected approve for non-taxonomy .claude path, got %s", result.Decision)
+	}
+	if result.SystemMessage != "" {
+		t.Errorf("expected no warning for non-taxonomy .claude path, got: %s", result.SystemMessage)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // R03: Bash write to protected paths
 // ---------------------------------------------------------------------------
@@ -133,6 +196,62 @@ func TestR03_NormalBash(t *testing.T) {
 	result := EvaluateRules(ctx)
 	if result.Decision != hookproto.DecisionApprove {
 		t.Errorf("expected approve, got %s", result.Decision)
+	}
+}
+
+func TestR03_RedirectToShellProfileDenied(t *testing.T) {
+	ctx := makeCtx("Bash", map[string]interface{}{"command": "printf 'bad' >> ~/.zshrc"})
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionDeny {
+		t.Errorf("expected deny, got %s", result.Decision)
+	}
+}
+
+func TestR03_TeeToClaudeSkillsAsksInWorkMode(t *testing.T) {
+	ctx := makeCtx("Bash", map[string]interface{}{"command": "printf '%s' data | tee -a .claude/skills/demo/SKILL.md"})
+	ctx.WorkMode = true
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionAsk {
+		t.Errorf("expected ask in work mode, got %s", result.Decision)
+	}
+}
+
+func TestR03_TeeToVSCodeAsks(t *testing.T) {
+	ctx := makeCtx("Bash", map[string]interface{}{"command": "echo '{}' | tee .vscode/settings.json >/dev/null"})
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionAsk {
+		t.Errorf("expected ask, got %s", result.Decision)
+	}
+}
+
+func TestR03_RedirectToClaudeMemoryWarns(t *testing.T) {
+	ctx := makeCtx("Bash", map[string]interface{}{"command": "cat <<'EOF' > .claude/memory/patterns.md\nx\nEOF"})
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionApprove {
+		t.Errorf("expected approve warning, got %s", result.Decision)
+	}
+	if result.SystemMessage == "" {
+		t.Error("expected warning systemMessage")
+	}
+}
+
+func TestR03_RedirectToClaudeHooksDeniedInWorkMode(t *testing.T) {
+	ctx := makeCtx("Bash", map[string]interface{}{"command": "echo '#!/bin/sh' > .claude/hooks/pre-tool.sh"})
+	ctx.WorkMode = true
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionDeny {
+		t.Errorf("expected deny in work mode, got %s", result.Decision)
+	}
+}
+
+func TestR03_RedirectToClaudeStateNotOverDenied(t *testing.T) {
+	ctx := makeCtx("Bash", map[string]interface{}{"command": "echo '{}' > .claude/state/session.json"})
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionApprove {
+		t.Errorf("expected approve for non-taxonomy .claude path, got %s", result.Decision)
+	}
+	if result.SystemMessage != "" {
+		t.Errorf("expected no warning for non-taxonomy .claude path, got: %s", result.SystemMessage)
 	}
 }
 

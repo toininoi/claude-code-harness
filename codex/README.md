@@ -202,6 +202,37 @@ Harness therefore avoids adding duplicate `--approval-policy` / `--sandbox` pair
 
 Details: `docs/codex-sandbox-execution-policy.md`.
 
+## Permission Profiles And Full-Auto Migration
+
+Codex `0.125.0` carries permission profile state across TUI sessions, user turns,
+MCP sandbox state, shell escalation, and app-server APIs.
+Codex `0.128.0` expands this with built-in permission profiles, sandbox profile
+selection, cwd controls, active-profile metadata, managed network hardening,
+`codex update`, and the `--full-auto` deprecation path.
+
+Harness policy:
+
+- Prefer explicit `--profile` and `--sandbox` choices in user/project config.
+- Keep named `permissions.<name>.filesystem` and `permissions.<name>.network`
+  rules in user, project, or managed requirements config.
+- Do not add `--full-auto` to new docs or new runtime entrypoints.
+- Do not invent unsupported flags such as `--permission-profile` or
+  `--sandbox-profile`; verify with `codex --help` and `codex exec --help`
+  before documenting CLI syntax.
+- Use `codex exec --json` reasoning-token data only after the JSONL contract is
+  covered by tests.
+- Keep Codex rollout tracing separate from Harness AgentTrace until a mapper
+  avoids double counting multi-agent relationships.
+- Prefer `codex update` when the command exists; use package-manager updates
+  only as fallback.
+
+The legacy `scripts/codex/codex-exec-wrapper.sh` `--full-auto` path is not a
+new default. It remains a behavior-preserving compatibility path until a focused
+test proves the replacement approval/sandbox command on the installed Codex
+version.
+
+Details: `docs/codex-permission-profiles-policy.md`.
+
 ## Runtime Behavior
 
 - `$harness-plan`, `$harness-sync`, `$harness-work`, `$breezing`, `$harness-review`, and `$harness-loop` are the primary Codex-facing workflow surfaces.

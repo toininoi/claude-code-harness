@@ -1,8 +1,8 @@
 # Plugin and Managed Settings Policy
 
-最終更新: 2026-04-23
+最終更新: 2026-05-03
 
-この文書は Claude Code `2.1.117-2.1.118` で増えた plugin / managed settings まわりの運用判断を、Harness の setup guidance として固定するためのものです。
+この文書は Claude Code `2.1.117-2.1.126` で増えた plugin / managed settings / managed sandbox まわりの運用判断を、Harness の setup guidance として固定するためのものです。
 
 ## ひとことで
 
@@ -33,6 +33,7 @@ Harness は plugin marketplace の安全運用を説明で支援するが、Clau
 | `extraKnownMarketplaces` | チームで使う marketplace を案内・登録する | 通常の team onboarding にはこちらを優先する |
 | plugin dependency auto-resolve / missing dependency hints | 依存 plugin の自動解決とエラー案内 | Harness 独自の dependency resolver は追加しない。Claude Code 本体に任せる |
 | `wslInheritsWindowsSettings` | Windows 側 managed settings を WSL に継承する | Windows / WSL 混在企業環境の候補。Harness default には入れない |
+| `allowManagedDomainsOnly` / `allowManagedReadPathsOnly` | managed sandbox の許可境界を管理者設定に寄せる | managed settings only。Harness の通常 template / plugin default / harness.toml には入れず、Claude Code 本体の precedence を上書きしない |
 
 ## Update controls
 
@@ -142,6 +143,26 @@ Harness の方針:
 - Harness default には入れない。
 - Windows / WSL の端末管理をしている組織だけが検討する。
 - WSL 側で意図せず強い policy が入ると開発体験に影響するため、`/status` で active settings source を確認してから運用する。
+
+## Managed sandbox precedence
+
+Claude Code `2.1.126` では、`allowManagedDomainsOnly` と
+`allowManagedReadPathsOnly` の precedence hardening が入りました。
+
+これは、管理者が「この範囲だけを許可する」と決めた sandbox 境界を、
+project-local な template や plugin default が緩めないようにする安全側の変更です。
+
+Harness の方針:
+
+- `allowManagedDomainsOnly` / `allowManagedReadPathsOnly` は managed settings only として扱う。
+- Harness の通常配布物である `harness.toml`、`.claude-plugin/settings.json`、
+  `templates/claude/settings.security.json.template`、
+  `templates/sandbox-settings.json.template` には既定値として入れない。
+- 企業管理環境で使う場合は、端末管理または Claude Code の managed settings を
+  source of truth にする。
+- Harness は独自に managed sandbox resolver を作らない。
+- `scripts/ci/check-consistency.sh` は、これらの managed-only key が通常 template
+  に混入していないことを回帰チェックする。
 
 ## Why this way
 

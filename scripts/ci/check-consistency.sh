@@ -282,6 +282,35 @@ else
   BYPASS_ISSUES=$((BYPASS_ISSUES + 1))
 fi
 
+# Check 4: managed sandbox precedence key は managed settings 専用。
+# 通常配布の harness.toml / plugin settings / templates に混ぜると、
+# Claude Code 本体の managed settings precedence と責務が曖昧になる。
+MANAGED_SANDBOX_KEY_RE='allowManagedDomainsOnly|allowManagedReadPathsOnly'
+MANAGED_SANDBOX_DEFAULT_TARGETS=(
+  "$PLUGIN_ROOT/harness.toml"
+  "$PLUGIN_ROOT/.claude-plugin/settings.json"
+  "$PLUGIN_ROOT/templates/claude/settings.security.json.template"
+  "$PLUGIN_ROOT/templates/sandbox-settings.json.template"
+)
+MANAGED_SANDBOX_ISSUES=0
+for target in "${MANAGED_SANDBOX_DEFAULT_TARGETS[@]}"; do
+  if [ ! -f "$target" ]; then
+    continue
+  fi
+  FOUND_KEYS=$(grep -nE "$MANAGED_SANDBOX_KEY_RE" "$target" || true)
+  if [ -n "$FOUND_KEYS" ]; then
+    echo "  ❌ managed sandbox key は通常 template/default に入れないでください: ${target#$PLUGIN_ROOT/}"
+    sed -n '1,3p' <<<"$FOUND_KEYS" | sed 's/^/      /'
+    MANAGED_SANDBOX_ISSUES=$((MANAGED_SANDBOX_ISSUES + 1))
+  fi
+done
+
+if [ $MANAGED_SANDBOX_ISSUES -eq 0 ]; then
+  echo "  ✅ managed sandbox key は managed settings 専用として分離"
+else
+  BYPASS_ISSUES=$((BYPASS_ISSUES + MANAGED_SANDBOX_ISSUES))
+fi
+
 if [ $BYPASS_ISSUES -eq 0 ]; then
   echo "  ✅ bypassPermissions 前提運用OK"
 else

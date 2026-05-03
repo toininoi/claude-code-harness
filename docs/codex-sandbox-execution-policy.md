@@ -1,8 +1,11 @@
 # Codex Sandbox And Execution Policy
 
-Last updated: 2026-04-23
+Last updated: 2026-05-03
 
-This document records how Harness treats Codex `0.123.0` sandbox and `codex exec` changes.
+This document records how Harness treats Codex sandbox and `codex exec` changes.
+For Codex `0.125.0` / `0.128.0` permission profiles, managed network hardening,
+`codex exec --json` telemetry, rollout tracing, `codex update`, and `--full-auto`
+deprecation policy, see `docs/codex-permission-profiles-policy.md`.
 
 ## ひとことで
 
@@ -98,7 +101,7 @@ No runtime wrapper behavior changes in this task.
 | Wrapper | Current behavior | Decision |
 |---------|------------------|----------|
 | `scripts/codex-companion.sh` structured task mode | Converts Harness `task --write` into `codex exec --sandbox workspace-write`; defaults read-only when no write/sandbox intent is present; preserves explicit caller sandbox flags | Keep. This is not duplicate root shared flag forwarding. It is Harness semantic mapping for structured task execution. |
-| `scripts/codex/codex-exec-wrapper.sh` | Runs `codex exec - --full-auto` after injecting hardening instructions | Keep for now. Changing this would alter approval/sandbox behavior and needs a separate task with behavioral tests. It already avoids adding separate `--approval-policy` and `--sandbox` pairs. |
+| `scripts/codex/codex-exec-wrapper.sh` | Runs `codex exec - --full-auto` after injecting hardening instructions | Legacy compatibility only. Do not copy this into new docs or new wrappers. Changing it would alter approval/sandbox behavior and needs a separate task with behavioral tests. It already avoids adding separate `--approval-policy` and `--sandbox` pairs. |
 | `scripts/codex-loop.sh` local worker | Uses a full-access one-cycle background prompt for the loop runner | Keep outside this task. 53.2.4 is policy and wrapper duplication review, not a loop permission migration. |
 
 ## Verification Record

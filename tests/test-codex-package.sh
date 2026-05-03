@@ -484,6 +484,71 @@ else
   log_fail "codex README sandbox/exec guidance is incomplete"
 fi
 
+log_test "Codex permission profile policy is documented"
+permission_policy_ok=true
+if [ ! -f "docs/codex-permission-profiles-policy.md" ]; then
+  echo "  missing: docs/codex-permission-profiles-policy.md"
+  permission_policy_ok=false
+fi
+if ! rg -q --fixed-strings 'Codex `0.125.0` carries permission profile state' "codex/README.md"; then
+  echo "  missing: Codex 0.125 permission profile README guidance"
+  permission_policy_ok=false
+fi
+if ! rg -q --fixed-strings 'Codex `0.128.0` expands this with built-in permission profiles' "codex/README.md"; then
+  echo "  missing: Codex 0.128 permission profile README guidance"
+  permission_policy_ok=false
+fi
+if ! rg -q --fixed-strings 'Details: `docs/codex-permission-profiles-policy.md`.' "codex/README.md"; then
+  echo "  missing: README pointer to permission profile policy"
+  permission_policy_ok=false
+fi
+if ! rg -q --fixed-strings 'docs/codex-permission-profiles-policy.md' "docs/codex-sandbox-execution-policy.md"; then
+  echo "  missing: sandbox policy pointer to permission profile policy"
+  permission_policy_ok=false
+fi
+for required_policy_term in \
+  'codex update' \
+  'codex exec --json' \
+  'reasoning-token' \
+  'rollout tracing' \
+  'managed network' \
+  'Local help did not show `--full-auto`, `--permission-profile`, or' \
+  'Do not copy that pattern into new docs or new scripts'; do
+  if ! rg -q --fixed-strings "$required_policy_term" "docs/codex-permission-profiles-policy.md"; then
+    echo "  missing policy term: $required_policy_term"
+    permission_policy_ok=false
+  fi
+done
+if rg -n --fixed-strings -- '--permission-profile' "scripts/codex" "scripts/codex-companion.sh" >/tmp/codex-unsupported-flags.$$ 2>/dev/null; then
+  echo "  unsupported permission-profile flag appears in runtime scripts"
+  cat /tmp/codex-unsupported-flags.$$ | sed 's/^/    /'
+  permission_policy_ok=false
+fi
+if rg -n --fixed-strings -- '--sandbox-profile' "scripts/codex" "scripts/codex-companion.sh" >/tmp/codex-unsupported-flags.$$ 2>/dev/null; then
+  echo "  unsupported sandbox-profile flag appears in runtime scripts"
+  cat /tmp/codex-unsupported-flags.$$ | sed 's/^/    /'
+  permission_policy_ok=false
+fi
+if rg -n --fixed-strings 'default to `--full-auto`' "docs/codex-permission-profiles-policy.md" "codex/README.md" >/tmp/codex-full-auto-default.$$ 2>/dev/null; then
+  echo "  new docs still make --full-auto sound like a default"
+  cat /tmp/codex-full-auto-default.$$ | sed 's/^/    /'
+  permission_policy_ok=false
+fi
+if ! rg -q --fixed-strings 'codex update' "scripts/check-codex.sh"; then
+  echo "  missing: scripts/check-codex.sh codex update guidance"
+  permission_policy_ok=false
+fi
+if ! rg -q --fixed-strings 'npm update -g @openai/codex' "scripts/check-codex.sh"; then
+  echo "  missing: scripts/check-codex.sh package-manager fallback guidance"
+  permission_policy_ok=false
+fi
+if $permission_policy_ok; then
+  log_pass "Codex permission profile policy is documented"
+else
+  log_fail "Codex permission profile policy checks failed"
+fi
+rm -f /tmp/codex-unsupported-flags.$$ /tmp/codex-full-auto-default.$$ || true
+
 log_test "Codex multi-environment write guard is wired and documented"
 primary_guard_ok=true
 if [ ! -x "scripts/codex-primary-environment-guard.sh" ]; then

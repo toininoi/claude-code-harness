@@ -40,6 +40,70 @@ func TestIsProtectedPath_NormalFile(t *testing.T) {
 	}
 }
 
+func TestClassifyProtectedPath_ClaudeCapabilityPathsAsk(t *testing.T) {
+	cases := []string{
+		".claude/skills/reviewer/SKILL.md",
+		".claude/agents/worker.md",
+		".claude/commands/work.md",
+		".vscode/settings.json",
+	}
+	for _, filePath := range cases {
+		t.Run(filePath, func(t *testing.T) {
+			match := classifyProtectedPath(filePath)
+			if match.Level != protectedPathAsk {
+				t.Fatalf("expected ask for %s, got %v", filePath, match.Level)
+			}
+		})
+	}
+}
+
+func TestClassifyProtectedPath_ClaudeRulesMemoryAndSetupWarn(t *testing.T) {
+	cases := []string{
+		".claude/rules/test-quality.md",
+		".claude/memory/decisions.md",
+		".claude/settings.json",
+		".claude/settings.local.json",
+		".claude-plugin/plugin.json",
+		"CLAUDE.md",
+		"AGENTS.md",
+		".mcp.json",
+		"harness.toml",
+	}
+	for _, filePath := range cases {
+		t.Run(filePath, func(t *testing.T) {
+			match := classifyProtectedPath(filePath)
+			if match.Level != protectedPathWarn {
+				t.Fatalf("expected warn for %s, got %v", filePath, match.Level)
+			}
+		})
+	}
+}
+
+func TestClassifyProtectedPath_ShellAndHookEntrypointsDeny(t *testing.T) {
+	cases := []string{
+		".zshrc",
+		"/Users/example/.bash_profile",
+		".config/fish/config.fish",
+		"Microsoft.PowerShell_profile.ps1",
+		".claude/hooks/pre-tool.sh",
+	}
+	for _, filePath := range cases {
+		t.Run(filePath, func(t *testing.T) {
+			match := classifyProtectedPath(filePath)
+			if match.Level != protectedPathDeny {
+				t.Fatalf("expected deny for %s, got %v", filePath, match.Level)
+			}
+		})
+	}
+}
+
+func TestClassifyProtectedPath_DoesNotOverDenyClaudeState(t *testing.T) {
+	match := classifyProtectedPath(".claude/state/session.json")
+	if match.Level != protectedPathNone {
+		t.Fatalf("expected no classification for .claude/state/session.json, got %v", match.Level)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Task 38.1.1: .husky protection (CC 2.1.90)
 // ---------------------------------------------------------------------------

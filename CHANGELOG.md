@@ -6,6 +6,11 @@ Change history for claude-code-harness.
 
 ## [Unreleased]
 
+### Changed
+
+- Phase 58 protected-write guardrails now classify sensitive paths as deny / ask / warn instead of treating every `.claude/` path the same. Claude capability paths, editor automation settings, shell profiles, hook entrypoints, secrets, and setup metadata now have focused coverage.
+- Codex package guidance now documents Codex `0.125.0` / `0.128.0` permission profiles, managed network policy, `codex exec --json` telemetry boundaries, rollout tracing, `codex update`, and legacy-only `--full-auto` handling.
+
 ## [4.5.0] - 2026-05-03
 
 ### Changed
