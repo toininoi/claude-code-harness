@@ -205,6 +205,10 @@ for skill_name in "${UPSTREAM_SKILL_NAMES[@]}"; do
   LOCAL_AGENT_SKILL="${ROOT_DIR}/.agents/skills/${skill_name}/SKILL.md"
 
   [ -f "${CANONICAL_SKILL}" ] || {
+    if [ "${skill_name}" = "claude-codex-upstream-update" ]; then
+      echo "skip: ${skill_name} is local-only in clean public checkouts"
+      continue
+    fi
     echo "${CANONICAL_SKILL} does not exist"
     exit 1
   }
@@ -239,18 +243,22 @@ grep -q '## A/B/C/P 分類' "${CC_UPDATE_REVIEW}" || {
 }
 
 UPSTREAM_UPDATE_SKILL="${ROOT_DIR}/skills/claude-codex-upstream-update/SKILL.md"
-grep -q 'no-op adaptation' "${UPSTREAM_UPDATE_SKILL}" || {
-  echo "claude-codex-upstream-update must allow documented no-op adaptation cycles"
-  exit 1
-}
-grep -q 'Codex `0.122.0` 以降で確認する項目' "${UPSTREAM_UPDATE_SKILL}" || {
-  echo "claude-codex-upstream-update is missing Codex 0.122.0+ watchlist"
-  exit 1
-}
-grep -q 'Claude Code `2.1.116` 以降の UX / 運用改善' "${UPSTREAM_UPDATE_SKILL}" || {
-  echo "claude-codex-upstream-update is missing Claude Code 2.1.116+ watchlist"
-  exit 1
-}
+if [ -f "${UPSTREAM_UPDATE_SKILL}" ]; then
+  grep -q 'no-op adaptation' "${UPSTREAM_UPDATE_SKILL}" || {
+    echo "claude-codex-upstream-update must allow documented no-op adaptation cycles"
+    exit 1
+  }
+  grep -q 'Codex `0.122.0` 以降で確認する項目' "${UPSTREAM_UPDATE_SKILL}" || {
+    echo "claude-codex-upstream-update is missing Codex 0.122.0+ watchlist"
+    exit 1
+  }
+  grep -q 'Claude Code `2.1.116` 以降の UX / 運用改善' "${UPSTREAM_UPDATE_SKILL}" || {
+    echo "claude-codex-upstream-update is missing Claude Code 2.1.116+ watchlist"
+    exit 1
+  }
+else
+  echo "skip: claude-codex-upstream-update is local-only in clean public checkouts"
+fi
 
 # Phase 53: snapshot doc and MCP hook safety decision
 PHASE53_SNAPSHOT_DOC="${ROOT_DIR}/docs/upstream-update-snapshot-2026-04-23.md"

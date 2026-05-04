@@ -164,12 +164,12 @@ assert_contains docs/i18n-language-contract.md "## Japanese UX Regression Bounda
 assert_contains docs/i18n-language-contract.md 'Creative skills such as `x-announce` and `x-article`'
 assert_contains docs/i18n-language-contract.md "Japanese article / post structure"
 assert_contains docs/i18n-language-contract.md "Do not remove Japanese defaults"
-assert_contains codex/.codex/skills/x-article/SKILL.md "画像内テキストは日本語を基本にする"
-assert_contains codex/.codex/skills/x-announce/SKILL.md "投稿テキスト5本"
 
 for optional_source in \
   skills/x-article/SKILL.md \
   skills/x-announce/SKILL.md \
+  codex/.codex/skills/x-article/SKILL.md \
+  codex/.codex/skills/x-announce/SKILL.md \
   .agents/skills/x-article/SKILL.md \
   .agents/skills/x-announce/SKILL.md; do
   if [ -f "$optional_source" ]; then
@@ -201,6 +201,8 @@ for path in (
     Path("codex/.codex/skills/x-article/SKILL.md"),
     Path("codex/.codex/skills/x-announce/SKILL.md"),
 ):
+    if not path.exists():
+        continue
     meta = frontmatter(path)
     assert meta["description"] == meta["description-en"], f"{path}: English discovery default drifted"
     assert meta["description-ja"], f"{path}: Japanese creative metadata disappeared"

@@ -6,6 +6,10 @@ Change history for claude-code-harness.
 
 ## [Unreleased]
 
+### Fixed
+
+- CI i18n and skill-manifest regression tests now use the tracked public payload as their baseline, so clean checkouts no longer expect local-only private skills to be present.
+
 ## [4.5.3] - 2026-05-04
 
 ### Fixed

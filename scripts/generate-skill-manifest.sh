@@ -31,6 +31,7 @@ done
 node - "$OUTPUT_FILE" <<'NODE'
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 process.stdout.on('error', (error) => {
   if (error.code === 'EPIPE') process.exit(0);
@@ -126,8 +127,25 @@ function rootNameFor(relativePath) {
 }
 
 const skillFiles = [];
-for (const root of roots) {
-  walk(path.join(repoRoot, root), skillFiles);
+let usedGitIndex = false;
+try {
+  const output = execFileSync('git', ['-C', repoRoot, 'ls-files', '-z', '--', ...roots], {
+    encoding: 'buffer',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  }).toString('utf8');
+  for (const relativePath of output.split('\0')) {
+    if (!relativePath.endsWith('/SKILL.md')) continue;
+    skillFiles.push(path.join(repoRoot, relativePath));
+  }
+  usedGitIndex = skillFiles.length > 0;
+} catch {
+  usedGitIndex = false;
+}
+
+if (!usedGitIndex) {
+  for (const root of roots) {
+    walk(path.join(repoRoot, root), skillFiles);
+  }
 }
 
 const skills = skillFiles
