@@ -6,6 +6,38 @@ Change history for claude-code-harness.
 
 ## [Unreleased]
 
+### Phase 64.2: deniedDomains SSOT inversion 事故の根治 (be2a1781 follow-up)
+
+**Phase 62.1.4 で「settings.json は user 手動同期」と割り切った設計が、be2a1781 commit 後に sync 経路で paste-site 6 件が毎セッション削除される事故を起こしました。SSOT を `harness.toml` に統一し、再発防止の二層ガードを追加しました。**
+
+#### 1. deniedDomains の SSOT を harness.toml に格上げ
+
+**今まで**: `templates/claude/settings.security.json.template` の canonical baseline は 9 件 (paste-site 6 件含む) でしたが、SSOT である `harness.toml` の `[safety.sandbox.network].deniedDomains` には 3 件 (cloud metadata) しか書いていませんでした。`.claude-plugin/settings.json` だけ手動編集して 9 件にした状態で `bin/harness sync` が走ると、harness.toml 起点で settings.json が再生成されるため 6 件が**毎セッション消える**現象が起きていました (be2a1781 commit から本セッションで 3 回観測)。発火経路は `scripts/session-init.sh` (SessionStart hook) → `sync-plugin-cache.sh` → `bin/harness sync`。
+
+**今後**: `harness.toml` に paste-site 6 件 (`pastebin.com` / `transfer.sh` / `0x0.st` / `paste.ee` / `termbin.com` / `ix.io`) を追記し、template と同じ canonical 9 件に揃えました。これで sync が冪等になり、SessionStart hook 経由の自動 sync が走っても settings.json から deniedDomains が消えません。これは過去 4 回起きた skills/monitors/agents block strip 事故 (CHANGELOG v4.0.4 / v3.10.x) と同型の「片肺 sync」事故の 5 回目で、構造的な再発防止策を 2 件追加しました (下記 2, 3)。
+
+#### 2. `bin/harness sync` に settings drift warning 追加
+
+**今まで**: `harness sync` は `.claude-plugin/settings.json` を harness.toml から完全上書きで書き出すため、手動編集された差分が**サイレントに削除**されていました。skills/monitors/agents block の事故も全て同じパターンで起きていました。
+
+**今後**: `go/cmd/harness/sync.go::reportSettingsDrift()` を追加。書き込み前に既存ファイルと内容を比較し、内容が変わるときだけ stderr に詳細 warning を出します。新規生成や idempotent run では何も出ません。例:
+
+```
+[WARN] .claude-plugin/settings.json drift detected — sync rewrote the file.
+  sandbox.network.deniedDomains: 9 -> 3 entries
+  entries were REMOVED — was settings.json edited directly without updating harness.toml?
+  SSOT is harness.toml. Mirror the change there and re-run 'bin/harness sync'.
+  Review with: git diff .claude-plugin/settings.json
+```
+
+これで「設定がいつの間にか消えた」事故が起きても、その瞬間に warning が出てユーザーが気付けます。`go/cmd/harness/sync_test.go` に 5 件の unit test (新規/idempotent/件数減/件数増/JSON parse) を追加して挙動を固定。
+
+#### 3. `tests/test-settings-baseline.sh` に SSOT alignment 検証 (観点 7)
+
+**今まで**: baseline test は template と settings.json の比較のみで、件数差は WARN 扱いでした (FAIL ではなかった)。harness.toml が SSOT として参照されていなかったため、`be2a1781` 状況 (settings.json と harness.toml が乖離) が CI を素通りしていました。
+
+**今後**: 観点 (7) として `harness.toml ↔ settings.json` の deniedDomains 件数一致と、paste-site 6 件全てが harness.toml にも書かれていることを FAIL レベルで assert。観点 (5) も WARN → FAIL に格上げし、settings.json が template baseline と件数一致することを必須化。これで CI gate (`tests/validate-plugin.sh` Section 9 経由) で SSOT drift を merge 前に検知できます。
+
 ## [4.8.0] - 2026-05-08
 
 ### Phase 62: Claude Code 2.1.112-2.1.132 後続活用 + Opus 4.7 follow-up

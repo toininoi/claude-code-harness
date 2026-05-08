@@ -64,10 +64,21 @@ ask = [
 failIfUnavailable = true
 
 [safety.sandbox.network]
+# SSOT for .claude-plugin/settings.json deniedDomains. Phase 62.1.4 baseline:
+# 3 cloud-metadata exfil endpoints + 6 paste-site/file-host endpoints.
+# Keep this aligned with templates/claude/settings.security.json.template.
+# Editing settings.json directly is denied by self-protection — update HERE
+# and run `bin/harness sync` to regenerate.
 deniedDomains = [
   "169.254.169.254",
   "metadata.google.internal",
   "metadata.azure.com",
+  "pastebin.com",
+  "transfer.sh",
+  "0x0.st",
+  "paste.ee",
+  "termbin.com",
+  "ix.io",
 ]
 
 [safety.sandbox.filesystem]
