@@ -37,6 +37,19 @@
 #   等の sentinel mark が入っているテキストは redact 対象から除外する。
 #   server 側 event-recorder.ts:redactContent との衝突防止。
 #
+#   harness-mem S110-006 closure (commit 8b34ecb) で確認:
+#   server 側 [REDACTED_*] format は大文字 EMAIL / KEY / SECRET / HEX を使う。
+#   client 側 sentinel regex は [A-Za-z0-9_]+ で大文字小文字両対応のため
+#   既存実装で問題なし。
+#
+# Envelope signals の扱い (harness-mem S110-006 防御的補足):
+#   memory-server/src/inject/envelope.ts:94-101 の validateProseContainsSignals
+#   は signals[] の各値を prose に substring match で要求する。signals に
+#   PII / 固有名詞を含めると Layer 2 が redact することで envelope 不変条件が
+#   壊れるため、**signals には structural label (project 名 / source 識別子等)
+#   のみ含め、PII / 固有名詞は prose 側に書く** ことを mem 側 SoT (envelope
+#   contract) に合わせて推奨。本 dict はあくまで prose 側を対象にする。
+#
 
 schema_version: client-redaction.v1
 
