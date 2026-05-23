@@ -358,7 +358,7 @@ Harness v4 は **Go ネイティブガードレールエンジン**（`go/intern
 | R04 | `git push --force` | **拒否** |
 | R05–R09 | モード固有のガード | コンテキスト判定 |
 | Post | `it.skip`, アサーション改ざん | **警告** |
-| Perm | `git status`, `npm test` | **自動許可** |
+| Perm | `git status`, `git diff`, `rg`, `npm/bun/pnpm/yarn test|lint|build` | **自動許可** |
 
 <p align="center">
   <img src="assets/readme-visuals-ja/safety-shield.svg" alt="セーフティシールド" width="600">

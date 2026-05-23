@@ -366,7 +366,7 @@ Harness v4 protects your codebase with a **Go-native guardrail engine** (`go/int
 | R12 | Direct push to `main` / `master` | **Ask** by default (`ask` / `deny` / `allow`) |
 | R13 | Protected file edits | **Warn** |
 | Post | `it.skip`, assertion tampering | **Warning** |
-| Perm | `git status`, `npm test` | **Auto-allow** |
+| Perm | `git status`, `git diff`, `rg`, `npm/bun/pnpm/yarn test|lint|build` | **Auto-allow** |
 
 Runtime differences between Claude Code hooks and Codex CLI gates are documented in [docs/hardening-parity.md](docs/hardening-parity.md).
 

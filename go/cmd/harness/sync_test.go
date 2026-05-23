@@ -76,6 +76,10 @@ default = "security-reviewer"
 CLAUDE_CODE_SUBPROCESS_ENV_SCRUB = "1"
 
 [safety.permissions]
+allow = [
+  "Bash(git status:*)",
+  "Bash(npm test:*)",
+]
 deny = [
   "Bash(sudo:*)",
   "Bash(rm -rf:*)",
@@ -171,6 +175,17 @@ func TestSync_GeneratesSettingsJSON(t *testing.T) {
 	if !ok {
 		t.Fatalf("settings.json permissions is not an object: %T", v["permissions"])
 	}
+	allowRaw, ok := permRaw["allow"].([]interface{})
+	if !ok {
+		t.Fatalf("settings.json permissions.allow is not an array")
+	}
+	if len(allowRaw) != 2 {
+		t.Errorf("permissions.allow len = %d, want 2", len(allowRaw))
+	}
+	if allowRaw[0] != "Bash(git status:*)" {
+		t.Errorf("permissions.allow[0] = %v, want Bash(git status:*)", allowRaw[0])
+	}
+
 	denyRaw, ok := permRaw["deny"].([]interface{})
 	if !ok {
 		t.Fatalf("settings.json permissions.deny is not an array")

@@ -28,6 +28,10 @@ CLAUDE_CODE_SUBPROCESS_ENV_SCRUB = "1"
 
 [safety.permissions]
 protectedBranchPush = "ask"
+allow = [
+  "Bash(git status:*)",
+  "Bash(npm test:*)",
+]
 deny = [
   "Bash(sudo:*)",
   "Bash(rm -rf:*)",
@@ -101,6 +105,20 @@ func TestParse_Full(t *testing.T) {
 	}
 
 	// [safety.permissions]
+	wantAllow := []string{
+		"Bash(git status:*)",
+		"Bash(npm test:*)",
+	}
+	if len(cfg.Safety.Permissions.Allow) != len(wantAllow) {
+		t.Errorf("permissions.allow len = %d, want %d", len(cfg.Safety.Permissions.Allow), len(wantAllow))
+	} else {
+		for i, v := range wantAllow {
+			if cfg.Safety.Permissions.Allow[i] != v {
+				t.Errorf("permissions.allow[%d] = %q, want %q", i, cfg.Safety.Permissions.Allow[i], v)
+			}
+		}
+	}
+
 	wantDeny := []string{
 		"Bash(sudo:*)",
 		"Bash(rm -rf:*)",
@@ -276,6 +294,9 @@ name = "minimal"
 	}
 	if len(cfg.Safety.Permissions.Deny) != 0 {
 		t.Errorf("permissions.deny should be empty")
+	}
+	if len(cfg.Safety.Permissions.Allow) != 0 {
+		t.Errorf("permissions.allow should be empty")
 	}
 }
 

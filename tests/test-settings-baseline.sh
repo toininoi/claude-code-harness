@@ -133,4 +133,54 @@ if [ -f "${HARNESS_TOML}" ] && [ -f "${PLUGIN_SETTINGS}" ]; then
   done
 fi
 
-echo "PASS: test-settings-baseline.sh (Phase 62.1.4 + 62.2.5 + Phase 64 SSOT-alignment) — 7 観点"
+# (8) Sandbox UX baseline: low-risk local dev commands must be explicit allow.
+# The sandbox isolates execution; permission prompts should remain for
+# destructive/network-expanding operations such as install, npx/npm exec,
+# merge/rebase, force push, and secret access.
+for allowed_command in \
+  'Bash(git status:*)' \
+  'Bash(git diff:*)' \
+  'Bash(git log:*)' \
+  'Bash(git branch:*)' \
+  'Bash(git show:*)' \
+  'Bash(rg:*)' \
+  'Bash(npm test:*)' \
+  'Bash(npm run test:*)' \
+  'Bash(npm run lint:*)' \
+  'Bash(npm run build:*)' \
+  'Bash(bun test:*)' \
+  'Bash(bun run test:*)' \
+  'Bash(bun run lint:*)' \
+  'Bash(bun run build:*)' \
+  'Bash(pnpm test:*)' \
+  'Bash(pnpm run test:*)' \
+  'Bash(pnpm run lint:*)' \
+  'Bash(pnpm run build:*)' \
+  'Bash(yarn test:*)' \
+  'Bash(yarn run test:*)' \
+  'Bash(yarn run lint:*)' \
+  'Bash(yarn run build:*)'; do
+  if ! jq -e --arg c "${allowed_command}" '.permissions.allow | index($c) != null' "${SECURITY_TEMPLATE}" >/dev/null; then
+    echo "FAIL (8a): ${SECURITY_TEMPLATE} missing permissions.allow entry: ${allowed_command}"
+    exit 1
+  fi
+  if [ -f "${PLUGIN_SETTINGS}" ] && ! jq -e --arg c "${allowed_command}" '.permissions.allow | index($c) != null' "${PLUGIN_SETTINGS}" >/dev/null; then
+    echo "FAIL (8b): ${PLUGIN_SETTINGS} missing permissions.allow entry: ${allowed_command}"
+    echo "  → harness.toml [safety.permissions].allow を更新してから 'bin/harness sync' を実行してください"
+    exit 1
+  fi
+done
+
+for still_ask in \
+  'Bash(npm install:*)' \
+  'Bash(npm exec:*)' \
+  'Bash(npx:*)' \
+  'Bash(bun install:*)' \
+  'Bash(pnpm install:*)'; do
+  if ! jq -e --arg c "${still_ask}" '.permissions.ask | index($c) != null' "${SECURITY_TEMPLATE}" >/dev/null; then
+    echo "FAIL (8c): ${SECURITY_TEMPLATE} must keep permissions.ask entry: ${still_ask}"
+    exit 1
+  fi
+done
+
+echo "PASS: test-settings-baseline.sh (Phase 62.1.4 + 62.2.5 + Phase 64 SSOT-alignment + sandbox UX allowlist) — 8 観点"

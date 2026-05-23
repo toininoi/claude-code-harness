@@ -200,8 +200,9 @@ type settingsJSON struct {
 }
 
 type permissionsField struct {
-	Deny []string `json:"deny,omitempty"`
-	Ask  []string `json:"ask,omitempty"`
+	Allow []string `json:"allow,omitempty"`
+	Deny  []string `json:"deny,omitempty"`
+	Ask   []string `json:"ask,omitempty"`
 }
 
 type sandboxField struct {
@@ -236,10 +237,11 @@ func generateSettingsJSON(projectRoot string, cfg *config.Config) error {
 
 	// [safety.permissions]
 	p := &permissionsField{
-		Deny: cfg.Safety.Permissions.Deny,
-		Ask:  cfg.Safety.Permissions.Ask,
+		Allow: cfg.Safety.Permissions.Allow,
+		Deny:  cfg.Safety.Permissions.Deny,
+		Ask:   cfg.Safety.Permissions.Ask,
 	}
-	if len(p.Deny) > 0 || len(p.Ask) > 0 {
+	if len(p.Allow) > 0 || len(p.Deny) > 0 || len(p.Ask) > 0 {
 		s.Permissions = p
 	}
 
