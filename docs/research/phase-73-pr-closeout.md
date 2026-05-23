@@ -49,16 +49,16 @@ Release preflight:
 bash scripts/release-preflight.sh --check-adapters
 ```
 
-Result: not release-clean in the current uncommitted worktree.
+Result: clean local release preflight passes after commit.
 
 Explicit unavailable reasons:
 
-- `working tree clean` fails because Phase 73 changes are intentionally
-  uncommitted in this worktree.
-- `release mirror drift` reports `opencode/AGENTS.md` and `opencode/README.md`
-  because adapter docs changed in this same patch; this becomes clean only after
-  the PR commit contains those generated outputs.
-- CI status is unavailable because the worktree is detached/unpushed.
+- Pre-commit checks correctly failed on dirty worktree and generated mirror
+  drift.
+- Post-commit `bash scripts/release-preflight.sh --check-adapters` passed with
+  15 passed / 5 warnings / 0 failed.
+- CI status is still unavailable immediately after first push because GitHub
+  Actions had no observed run yet for branch `codex/phase-73-74-harness-v2`.
 
 Phase 74 hardening added:
 
@@ -107,9 +107,7 @@ Details: [phase-73-review-closeout.md](phase-73-review-closeout.md).
   is not treated as reliable review evidence in this environment.
 - OpenCode runtime native-skill smoke is not observed locally because the real
   `opencode` binary is unavailable behind the Superset wrapper.
-- `bash scripts/release-preflight.sh --check-adapters` still cannot be claimed
-  PASS in this dirty local worktree; it should be rerun after commit in a clean
-  release context.
+- GitHub CI still needs to pass on the PR / branch context before release-ready.
 - Codex app, Cursor, GitHub Copilot CLI, and Antigravity CLI remain outside
   public release claims until host-specific smoke exists.
 
@@ -147,6 +145,6 @@ Details: [phase-73-review-closeout.md](phase-73-review-closeout.md).
 
 Release readiness is evidence-backed for Claude Code plus internal Codex CLI /
 OpenCode compatibility. Candidate and future/unsupported hosts are documented
-without being promoted. Final release-ready still requires clean-tree
-`bash scripts/release-preflight.sh --check-adapters` and GitHub CI on the PR/tag
-context.
+without being promoted. Clean local `bash scripts/release-preflight.sh
+--check-adapters` now passes; final release-ready still requires GitHub CI on
+the PR/tag context.

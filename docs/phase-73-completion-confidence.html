@@ -630,13 +630,13 @@
           <div class="metric-top">
             <div>
               <h3>Release 準備</h3>
-              <p class="muted small">workflow-gated, not clean yet</p>
+              <p class="muted small">clean preflight passed</p>
             </div>
             <span class="pill low">gated</span>
           </div>
-          <div class="metric-value">72</div>
-          <div class="meter amber"><span style="width: 72%"></span></div>
-          <p class="muted small">根拠: release workflow は preflight-gated になった。残りは dirty worktree、clean preflight、GitHub CI、PR/tag context。</p>
+          <div class="metric-value">80</div>
+          <div class="meter amber"><span style="width: 80%"></span></div>
+          <p class="muted small">根拠: release workflow は preflight-gated になり、commit 後の clean preflight も PASS。残りは GitHub CI と PR/tag context。</p>
         </article>
       </div>
     </section>
@@ -676,7 +676,7 @@
             <tr>
               <td><strong>Release preflight</strong></td>
               <td><code>release.yml</code> が asset publish 前に <code>scripts/release-preflight.sh --check-adapters</code> を実行するようになった。</td>
-              <td>dirty worktree や generated mirror drift は、clean release context で再確認が必要。</td>
+              <td>commit 前は dirty worktree と generated mirror drift を検出。commit 後の clean preflight は PASS。</td>
               <td><code>docs/release-preflight.md</code> と <code>tests/test-release-preflight.sh</code> で workflow order を固定。</td>
               <td><span class="pill high">完了</span></td>
             </tr>
@@ -726,7 +726,7 @@
           <span class="pill low">release 前 gate</span>
           <h3>公開 release gate</h3>
           <p class="muted">
-            lint/format と preflight 接続は Phase 74 で完了。残りは clean tree での release preflight、GitHub CI、PR 作成、candidate host の runtime smoke。
+            lint/format と preflight 接続は Phase 74 で完了。clean preflight も通過済み。残りは GitHub CI、PR 作成、candidate host の runtime smoke。
           </p>
         </article>
       </div>
@@ -770,7 +770,7 @@
         <article class="card flow-step">
           <div class="step-num">5</div>
           <h3>PR / Release closeout</h3>
-          <p class="muted small">PR body と release boundary は更新。clean preflight と GitHub CI は commit / PR 後に再実行。</p>
+          <p class="muted small">PR body と release boundary は更新。clean preflight は通過済みで、GitHub CI は PR 後に確認。</p>
           <span class="pill medium">74</span>
         </article>
       </div>
@@ -955,7 +955,7 @@
               <td><span class="pill medium">条件付き完了</span></td>
               <td class="score-cell"><span class="score-inline">74 <span class="mini-meter medium"><span style="width: 74%"></span></span></span></td>
               <td>PR body draft、support tiers、residual risk、release boundary を Phase 74 gate 結果で更新。</td>
-              <td>dirty worktree なので release-clean ではない。CI / PR / clean preflight が残る。</td>
+              <td>clean preflight は通過済み。CI / PR が残る。</td>
             </tr>
           </tbody>
         </table>
@@ -992,7 +992,7 @@
           </div>
           <div class="metric-value">76</div>
           <div class="meter amber"><span style="width: 76%"></span></div>
-          <p class="muted small"><code>release.yml</code> は asset publish 前に preflight 実行。clean context の再実行は残る。</p>
+          <p class="muted small"><code>release.yml</code> は asset publish 前に preflight 実行。clean local preflight も PASS。</p>
         </article>
 
         <article class="card metric">
@@ -1052,7 +1052,7 @@
       <span class="pill">next decision</span>
       <h2>あなたが今判断すべきこと</h2>
       <p>
-        この差分は Phase 73 + Phase 74 の PR として出せる状態に近い。ただし release ready と呼ぶのは、commit 後の clean tree で <code>release-preflight --check-adapters</code> と GitHub CI を通してから。
+        この差分は Phase 73 + Phase 74 の PR として出せる状態。clean tree の <code>release-preflight --check-adapters</code> は通過済み。ただし release ready と呼ぶのは、GitHub CI を通してから。
       </p>
       <div class="grid three">
         <article>
@@ -1065,7 +1065,7 @@
         </article>
         <article>
           <h3>3. Release 判定</h3>
-          <p>clean preflight と CI が通った後、Claude Code + internal Codex CLI/OpenCode までを claim する。</p>
+          <p>clean preflight は通過済み。CI が通った後、Claude Code + internal Codex CLI/OpenCode までを claim する。</p>
         </article>
       </div>
     </section>
