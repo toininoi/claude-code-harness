@@ -26,11 +26,14 @@ assert_file "$MANIFEST"
 assert_file "$MARKETPLACE"
 assert_file "$APP_PROOF"
 
-node - "$MANIFEST" "$MARKETPLACE" <<'NODE'
+MANIFEST_VERSION="$(node -e 'const fs=require("fs"); console.log(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).version)' "$MANIFEST")"
+
+node - "$MANIFEST" "$MARKETPLACE" "$ROOT_DIR/VERSION" <<'NODE'
 const fs = require("fs");
-const [manifestPath, marketplacePath] = process.argv.slice(2);
+const [manifestPath, marketplacePath, versionPath] = process.argv.slice(2);
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 const marketplace = JSON.parse(fs.readFileSync(marketplacePath, "utf8"));
+const version = fs.readFileSync(versionPath, "utf8").trim();
 const plugin = marketplace.plugins.find((entry) => entry.name === "claude-code-harness");
 function assert(cond, msg) {
   if (!cond) {
@@ -39,7 +42,7 @@ function assert(cond, msg) {
   }
 }
 assert(manifest.name === "claude-code-harness", "manifest name mismatch");
-assert(manifest.version === "4.11.3", "manifest version mismatch");
+assert(manifest.version === version, "manifest version mismatch");
 assert(manifest.skills === "../codex/.codex/skills/", "manifest skills path must target Codex mirror relative to .codex-plugin");
 assert(manifest.interface && manifest.interface.displayName === "Claude Code Harness", "missing interface displayName");
 assert(Array.isArray(manifest.interface.defaultPrompt) && manifest.interface.defaultPrompt.length >= 2, "missing default prompts");
@@ -94,7 +97,7 @@ NODE
   grep -Fq '[plugins."claude-code-harness@claude-code-harness-marketplace"]' "$TMP_CODEX_HOME/config.toml" \
     || fail "installed plugin not recorded in isolated CODEX_HOME config"
 
-  CACHE_ROOT="$TMP_CODEX_HOME/plugins/cache/claude-code-harness-marketplace/claude-code-harness/4.11.3"
+  CACHE_ROOT="$TMP_CODEX_HOME/plugins/cache/claude-code-harness-marketplace/claude-code-harness/$MANIFEST_VERSION"
   [ -f "$CACHE_ROOT/.codex-plugin/plugin.json" ] || fail "Codex plugin manifest was not cached"
   [ -f "$CACHE_ROOT/codex/.codex/skills/harness-plan/SKILL.md" ] || fail "Codex harness-plan skill was not cached"
   rm -f /tmp/codex-plugin-smoke.$$ /tmp/codex-plugin-list.$$ /tmp/codex-plugin-add.$$
