@@ -6,6 +6,21 @@ Change history for claude-code-harness.
 
 ## [Unreleased]
 
+## [4.12.5] - 2026-05-27
+
+### Fixed
+
+- Closed the remaining Dependabot alerts in the Breezing benchmark `agent-eval`
+  lockfile by updating `@vercel/agent-eval`, applying scoped npm overrides for
+  patched `undici`, `minimatch`, and `uuid` ranges, and aligning benchmark dry
+  run task references with the tracked eval fixtures.
+
+### Security
+
+- Added a scoped Dependabot npm update entry and CI audit gate for
+  `benchmarks/breezing-bench/agent-eval` so benchmark-tooling lockfile
+  advisories are checked before future releases.
+
 ## [4.12.4] - 2026-05-27
 
 ### Added
@@ -4530,7 +4545,8 @@ Purpose: 自己修正ループ失敗時に「止まるだけ」から「次の�
 
 For v2.9.x and earlier, see [GitHub Releases](https://github.com/Chachamaru127/claude-code-harness/releases).
 
-[Unreleased]: https://github.com/Chachamaru127/claude-code-harness/compare/v4.12.4...HEAD
+[Unreleased]: https://github.com/Chachamaru127/claude-code-harness/compare/v4.12.5...HEAD
+[4.12.5]: https://github.com/Chachamaru127/claude-code-harness/compare/v4.12.4...v4.12.5
 [4.12.4]: https://github.com/Chachamaru127/claude-code-harness/compare/v4.12.3...v4.12.4
 [4.12.3]: https://github.com/Chachamaru127/claude-code-harness/compare/v4.12.2...v4.12.3
 [4.12.2]: https://github.com/Chachamaru127/claude-code-harness/compare/v4.12.1...v4.12.2
