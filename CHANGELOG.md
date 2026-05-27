@@ -13,6 +13,8 @@ Change history for claude-code-harness.
   and works-in-practice gates before tasks are marked implementation-ready.
   Lightweight planning remains allowed through an explicit lightweight mode, and
   secret values must not be read as part of planning validation.
+- Updated the English and Japanese READMEs to describe the new non-trivial
+  `harness-plan` validation gate and lightweight fast path.
 
 ## [4.12.7] - 2026-05-27
 
