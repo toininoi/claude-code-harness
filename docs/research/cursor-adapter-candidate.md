@@ -248,6 +248,28 @@ hot-reloaded:
   diff review + cherry-pick through R01-R13, and treating cursor output as
   untrusted. This is why write containment cannot be delegated to Cursor at all.
 
+### Egress + memory findings (2026-05-29)
+
+- **Cursor egress hosts** (from `~/.cursor/cli-config.json`): `api2.cursor.sh` and
+  `agentn.global.api5.cursor.sh`. A CC sandbox `network.allowedDomains` entry of
+  `*.cursor.sh` covers both, letting cursor-agent reach the cloud WITHOUT
+  per-run `dangerouslyDisableSandbox` (ergonomic win; sandbox's other guards stay on).
+  (TLS SAN capture by bare IP failed — the ALB requires SNI — so the hostnames
+  come from the CLI config, not a cert probe.)
+- **harness-mem already wired globally**: `~/.cursor/mcp.json` contains a
+  `harness-mem` server entry. cursor-agent (CLI) loads global `~/.cursor/mcp.json`,
+  so the body (composer) already shares memory with the brain (Opus). The
+  repo-level `.cursor/mcp.json` is empty and **redundant** for this user — Phase
+  83.6 reduces to "confirm cursor-agent loads global mcp at runtime + document";
+  no repo wiring required.
+- **83.3b reality**: the CC sandbox filesystem-write rule is a GLOBAL setting;
+  restricting writes to a single worktree would also block normal local dev, so
+  outer-sandbox write-confinement is not a clean per-run control. Recommendation:
+  do the `*.cursor.sh` network allowlist (keeps sandbox on), but keep write-mode
+  containment as worktree + Lead review + per-session consent (same posture as
+  Codex). Strict write-confinement via the sandbox is optional global hardening,
+  not a blocker.
+
 ## Promotion Conditions
 
 Cursor can move beyond `candidate` only after all of the following in the same
