@@ -6,6 +6,11 @@ Change history for claude-code-harness.
 
 ## [Unreleased]
 
+### Documentation
+
+- **非 claude backend のトポロジー SSOT 化**: `HARNESS_IMPL_BACKEND=cursor` / `=codex` のとき、Lead は Worker agent (`claude-code-harness:worker`) を spawn せず、`scripts/cursor-companion.sh` / `scripts/codex-companion.sh` を直接呼ぶ運用を skill 正本と shareable rule に明記。Worker 層介在は backend=`claude` のときだけ（agent 契約 `worker-report.v1` / `self_review` が非 claude では生成されないため）。
+- **Lead の cherry-pick 前ゲートに contract-grep 必須を明記**: 非 claude backend の出力を main に取り込む前に、目視 diff だけでなく `test-support-claim-wording.sh` / `check-consistency.sh` / `validate-plugin.sh` の固定文字列契約チェックを必ず通す運用を `skills/harness-work/SKILL.md` に追記。composer の表面的 dedup 傾向と docs/locale/matrix の固定句契約 (`5動詞ワークフロー` 等) の衝突を防ぐ。
+
 ## [4.13.0] - 2026-05-29
 
 ### Added
